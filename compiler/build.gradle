@@ -1,0 +1,16 @@
+apply plugin: 'java'
+
+ext {
+    sourceDir = sourceSets.main.java.srcDirs
+    packageType = 'jar'
+    artifact = 'domain-cache-compiler'
+}
+
+apply from: rootProject.file('maven.gradle')
+
+dependencies {
+    compile 'com.google.auto.service:auto-service:1.0-rc2'
+    compile 'com.squareup:javapoet:1.5.1'
+    compile 'com.google.auto:auto-common:0.4'
+    compile "${rootProject.ext.libraryGroup}:${project(':annotation').ext.artifact}:${rootProject.ext.libraryVersion}"
+}

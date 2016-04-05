@@ -1,0 +1,9 @@
+apply plugin: 'java'
+
+ext {
+    sourceDir = sourceSets.main.java.srcDirs
+    packageType = 'jar'
+    artifact = 'domain-cache-annotation'
+}
+
+apply from: rootProject.file('maven.gradle')

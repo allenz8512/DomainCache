@@ -1,0 +1,55 @@
+apply plugin: 'com.github.dcendents.android-maven'
+
+task sourcesJar(type: Jar) {
+    from sourceDir
+    classifier = 'sources'
+}
+
+javadoc {
+    options {
+        encoding 'UTF-8'
+        charSet 'UTF-8'
+        author true
+        version true
+    }
+}
+
+task javadocJar(type: Jar, dependsOn: javadoc) {
+    classifier = 'javadoc'
+    from javadoc.destinationDir
+}
+
+install {
+    repositories.mavenInstaller {
+        pom {
+            project {
+                packaging packageType
+
+                groupId rootProject.ext.libraryGroup
+                artifactId artifact
+                version rootProject.ext.libraryVersion
+
+                name 'DomainCache'
+
+                licenses {
+                    license {
+                        name 'The Apache Software License, Version 2.0'
+                        url 'http://www.apache.org/licenses/LICENSE-2.0.txt'
+                    }
+                }
+                developers {
+                    developer {
+                        id 'Allenz'
+                        name 'Allenz'
+                        email 'zjlmeet@gmail.com'
+                    }
+                }
+            }
+        }
+
+        artifacts {
+            archives sourcesJar
+            archives javadocJar
+        }
+    }
+}

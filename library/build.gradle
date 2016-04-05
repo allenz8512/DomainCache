@@ -1,0 +1,36 @@
+apply plugin: 'com.android.library'
+apply plugin: 'me.tatarka.retrolambda'
+
+android {
+    compileSdkVersion 23
+    buildToolsVersion "23.0.3"
+
+    defaultConfig {
+        minSdkVersion 15
+        targetSdkVersion 23
+        versionCode rootProject.ext.libraryVersionCode
+        versionName rootProject.ext.libraryVersion
+    }
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+}
+
+dependencies {
+    compile 'com.alibaba:fastjson:1.1.46.android'
+    compile 'io.reactivex:rxandroid:1.1.0'
+}
+
+ext {
+    sourceDir = android.sourceSets.main.java.srcDirs
+    packageType = 'aar'
+    artifact = 'domain-cache-library'
+}
+
+task javadoc(type: Javadoc) {
+    source = sourceDir
+    classpath += project.files(android.getBootClasspath().join(File.pathSeparator))
+}
+
+apply from: rootProject.file('maven.gradle')

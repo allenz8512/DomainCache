@@ -1,0 +1,29 @@
+ext {
+    libraryGroup = 'me.allenzjl'
+    libraryVersionCode = 1
+    libraryVersion = '0.1.0'
+}
+
+buildscript {
+    repositories {
+        jcenter()
+        mavenCentral()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:2.0.0-beta6'
+        classpath 'me.tatarka:gradle-retrolambda:3.2.5'
+        classpath 'com.github.dcendents:android-maven-gradle-plugin:1.3'
+    }
+}
+
+allprojects {
+    repositories {
+        mavenLocal()
+        jcenter()
+        mavenCentral()
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}
