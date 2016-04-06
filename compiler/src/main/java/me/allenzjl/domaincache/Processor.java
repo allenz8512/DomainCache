@@ -106,9 +106,6 @@ public class Processor extends AbstractProcessor {
                 } else if (isCacheParameterElement(methodElement)) {
                     verifyCacheParameterElement(methodElement);
                     cacheClass.addCacheParameter(new AdditionalParameter(methodElement));
-                } else if (isNonCacheableElement(methodElement)) {
-                    cacheClass
-                            .addMethod(new NonCacheMethod(cacheClass.getPackageName(), cacheClass.getClassName(), methodElement));
                 }
             }
         }
@@ -146,9 +143,6 @@ public class Processor extends AbstractProcessor {
         if (e.getModifiers().contains(Modifier.STATIC)) {
             ProcessUtils.printError("@CacheParameter should not annotate a static method/field", e);
         }
-        if (e.getAnnotation(CacheIgnore.class) != null) {
-            ProcessUtils.printError("Method annotated by @CacheParameter should not annotated by @CacheIgnore", e);
-        }
         if (e.getAnnotation(Cacheable.class) != null) {
             ProcessUtils.printError("Method annotated by @CacheParameter should not annotated by @Cacheable", e);
         }
@@ -179,9 +173,6 @@ public class Processor extends AbstractProcessor {
         if (e.getReturnType().getKind() == TypeKind.VOID) {
             ProcessUtils.printError("Method annotated by @Cacheable should return something", e);
         }
-        if (e.getAnnotation(CacheIgnore.class) != null) {
-            ProcessUtils.printError("Method annotated by @Cacheable should not annotated by @CacheIgnore", e);
-        }
         if (e.getAnnotation(CacheParameter.class) != null) {
             ProcessUtils.printError("Method annotated by @Cacheable should not annotated by @CacheParameter", e);
         }
@@ -195,12 +186,6 @@ public class Processor extends AbstractProcessor {
         } else if (returnTypeName instanceof TypeVariableName || returnTypeName instanceof WildcardTypeName) {
             ProcessUtils.printError("Unsupported return type of method annotated by @Cacheable", e);
         }
-    }
-
-    protected boolean isNonCacheableElement(ExecutableElement element) {
-        Set<Modifier> modifiers = element.getModifiers();
-        return !(!modifiers.contains(Modifier.PUBLIC) || modifiers.contains(Modifier.STATIC)) &&
-                element.getAnnotation(CacheIgnore.class) == null;
     }
 
     protected void markCacheMethod(ExecutableElement cacheMethodElement) {
