@@ -88,6 +88,41 @@ public class ProcessUtils {
         return methodBuilder;
     }
 
+    public static MethodSpec.Builder overrideConstructor(ExecutableElement method) {
+        if (method == null) {
+            throw new NullPointerException("method == null");
+        }
+
+        Set<Modifier> modifiers = method.getModifiers();
+        if (modifiers.contains(Modifier.PRIVATE)) {
+            throw new IllegalArgumentException("cannot override constructor with modifiers: " + modifiers);
+        }
+
+        MethodSpec.Builder methodBuilder = MethodSpec.constructorBuilder();
+        methodBuilder.addModifiers(modifiers);
+
+        List<? extends VariableElement> parameters = method.getParameters();
+        int size = parameters.size();
+        StringBuilder builder = new StringBuilder();
+        for (int i = 0; i < size; i++) {
+            VariableElement parameter = parameters.get(i);
+            TypeName type = TypeName.get(parameter.asType());
+            String name = parameter.getSimpleName().toString();
+            Set<Modifier> parameterModifiers = parameter.getModifiers();
+            ParameterSpec.Builder parameterBuilder = ParameterSpec.builder(type, name)
+                    .addModifiers(parameterModifiers.toArray(new Modifier[parameterModifiers.size()]));
+            methodBuilder.addParameter(parameterBuilder.build());
+            builder.append(name);
+            if (i < size - 1) {
+                builder.append(", ");
+            }
+        }
+
+        methodBuilder.addStatement("super($N)", builder.toString());
+
+        return methodBuilder;
+    }
+
     public static String getTypeQualifiedName(TypeElement typeElement) {
         String packageName =
                 ProcessUtils.getProcessingEnv().getElementUtils().getPackageOf(typeElement).getQualifiedName().toString();

@@ -17,7 +17,7 @@ import javax.lang.model.element.VariableElement;
 /**
  * The type Cache method.
  */
-public class CacheMethod extends AbstractMethod {
+public class CacheMethod extends BaseMethod {
 
     public static final int RETURN_TYPE_FORM_OBJECT = 0;
 
@@ -30,8 +30,6 @@ public class CacheMethod extends AbstractMethod {
     protected String mCacheAlias;
 
     protected int mExpire;
-
-    protected int mStrategy;
 
     protected List<AdditionalParameter> mAdditionalParameters;
 
@@ -55,11 +53,6 @@ public class CacheMethod extends AbstractMethod {
             ProcessUtils.printError("Value of attribute 'expire' should not below zero", mMethodElement);
         }
         mExpire = expire;
-        int strategy = CacheStrategy.READ_CACHE_ONLY;
-        if (strategy != CacheStrategy.READ_CACHE_ONLY && strategy != CacheStrategy.PUSH_CACHE_FIRST) {
-            ProcessUtils.printError("Value of attribute 'strategy' is illegal", mMethodElement);
-        }
-        mStrategy = strategy;
     }
 
     protected void initResultType() {
@@ -98,7 +91,7 @@ public class CacheMethod extends AbstractMethod {
     }
 
     @Override
-    protected MethodSpec generateCallMethod(MethodSpec.Builder methodBuilder) {
+    protected void addMethodContent(MethodSpec.Builder methodBuilder) {
         initResultType();
         String keyName = mMethodName + "_k";
         String jsonObjectName = mMethodName + "_p";
@@ -117,14 +110,13 @@ public class CacheMethod extends AbstractMethod {
             }
             for (AdditionalParameter parameter : mAdditionalParameters) {
                 String paramName = mClassName + "_" + parameter.getName();
-                String statement = "$N.put($S, $N.this.$N.$N";
+                String statement = "$N.put($S, $N";
                 if (parameter.isMethod()) {
                     statement += "())";
                 } else {
                     statement += ")";
                 }
-                methodBuilder.addStatement(statement, jsonObjectName, paramName, mClassName, CacheClass.CLIENT_FIELD_NAME,
-                        parameter.getName());
+                methodBuilder.addStatement(statement, jsonObjectName, paramName, parameter.getName());
             }
         }
         String getMethodName;
@@ -137,24 +129,13 @@ public class CacheMethod extends AbstractMethod {
         }
         methodBuilder.addStatement("$T $N = $T.getInstance().$N($N, $N, $T.class)", mReturnType, resultName, CACHE_STORAGE_TYPE,
                 getMethodName, keyName, jsonObjectName, mResultType);
-        methodBuilder.beginControlFlow("if ($N != null)", resultName);
-        methodBuilder.addStatement("$N.onNext($N)", SUBSCRIBER_NAME, resultName);
-        if (mStrategy == CacheStrategy.READ_CACHE_ONLY) {
-            methodBuilder.nextControlFlow("else");
-        } else {
-            methodBuilder.endControlFlow();
-        }
-        methodBuilder.addStatement("$N = $N.this.$N.$N($N)", resultName, mClassName, CacheClass.CLIENT_FIELD_NAME, mMethodName,
-                buildParamNames());
+        methodBuilder.beginControlFlow("if ($N == null)", resultName);
+        methodBuilder.addStatement("$N = super.$N($N)", resultName, mMethodName, buildParamNames());
         methodBuilder
                 .addStatement("$T.getInstance().put($N, $N, $N, $S, $L)", CACHE_STORAGE_TYPE, keyName, jsonObjectName, resultName,
                         mCacheAlias, mExpire);
-        methodBuilder.addStatement("$N.onNext($N)", SUBSCRIBER_NAME, resultName);
-        if (mStrategy == CacheStrategy.READ_CACHE_ONLY) {
-            methodBuilder.endControlFlow();
-        }
-        methodBuilder.addStatement("$N.onCompleted()", SUBSCRIBER_NAME);
-        return methodBuilder.build();
+        methodBuilder.endControlFlow();
+        methodBuilder.addStatement("return $N", resultName);
     }
 
 }

@@ -1,6 +1,5 @@
 package me.allenzjl.domaincache;
 
-import com.squareup.javapoet.FieldSpec;
 import com.squareup.javapoet.JavaFile;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
@@ -10,9 +9,13 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import javax.lang.model.element.Element;
+import javax.lang.model.element.ElementKind;
+import javax.lang.model.element.ExecutableElement;
 import javax.lang.model.element.Modifier;
 import javax.lang.model.element.TypeElement;
 
@@ -21,9 +24,7 @@ import javax.lang.model.element.TypeElement;
  */
 public class CacheClass {
 
-    public static final String CACHE_CLASS_NAME_SUFFIX = "Cacheable";
-
-    public static final String CLIENT_FIELD_NAME = "client";
+    public static final String CACHE_CLASS_NAME_SUFFIX = "Proxy";
 
     protected TypeElement mClassElement;
 
@@ -31,7 +32,7 @@ public class CacheClass {
 
     protected String mClassName;
 
-    protected Set<AbstractMethod> mMethods;
+    protected Set<BaseMethod> mMethods;
 
     protected boolean mJavaFileGenerated = false;
 
@@ -65,7 +66,7 @@ public class CacheClass {
         return mCacheParameters;
     }
 
-    public void addMethod(AbstractMethod cacheMethod) {
+    public void addMethod(BaseMethod cacheMethod) {
         if (!mMethods.contains(cacheMethod)) {
             mMethods.add(cacheMethod);
         }
@@ -94,21 +95,37 @@ public class CacheClass {
     }
 
     protected TypeSpec generateCacheClass() {
-        TypeSpec.Builder cacheClassBuilder = TypeSpec.classBuilder(mClassName).addModifiers(Modifier.PUBLIC);
         TypeName clientClassType = TypeName.get(mClassElement.asType());
-        // 添加要代理的字段
-        FieldSpec clientField = FieldSpec.builder(clientClassType, CLIENT_FIELD_NAME, Modifier.PROTECTED).build();
-        cacheClassBuilder.addField(clientField);
-        // 添加构造方法
-        MethodSpec constructor =
-                MethodSpec.constructorBuilder().addModifiers(Modifier.PUBLIC).addParameter(clientClassType, CLIENT_FIELD_NAME)
-                        .addStatement("this.$N = $N", CLIENT_FIELD_NAME, CLIENT_FIELD_NAME).build();
-        cacheClassBuilder.addMethod(constructor);
-        // 添加方法
-        for (AbstractMethod method : mMethods) {
+        TypeSpec.Builder cacheClassBuilder =
+                TypeSpec.classBuilder(mClassName).addModifiers(Modifier.PUBLIC).superclass(clientClassType);
+        addCacheClassConstructors(cacheClassBuilder);
+        for (BaseMethod method : mMethods) {
             cacheClassBuilder.addMethod(method.generateMethod(mCacheParameters));
         }
         return cacheClassBuilder.build();
+    }
+
+    protected void addCacheClassConstructors(TypeSpec.Builder classBuilder) {
+        List<? extends Element> elements = mClassElement.getEnclosedElements();
+        boolean containNonPublicConstructor = false;
+        boolean containPublicConstructor = false;
+        for (Element e : elements) {
+            if (e.getKind() != ElementKind.CONSTRUCTOR) {
+                continue;
+            }
+            ExecutableElement constructor = (ExecutableElement) e;
+            if (constructor.getModifiers().contains(Modifier.PUBLIC)) {
+                MethodSpec.Builder constructorBuilder = ProcessUtils.overrideConstructor(constructor);
+                classBuilder.addMethod(constructorBuilder.build());
+                containPublicConstructor = true;
+            } else {
+                containNonPublicConstructor = true;
+            }
+        }
+        if (containNonPublicConstructor && !containPublicConstructor) {
+            ProcessUtils
+                    .printError("Class annotated by @CacheableDomain should have at least one public constructor", mClassElement);
+        }
     }
 
     public void generateJavaFile() {
@@ -136,10 +153,8 @@ public class CacheClass {
 
         CacheClass that = (CacheClass) o;
 
-        if (mPackageName != null ? !mPackageName.equals(that.mPackageName) : that.mPackageName != null) {
-            return false;
-        }
-        return mClassName != null ? mClassName.equals(that.mClassName) : that.mClassName == null;
+        return mPackageName != null ? mPackageName.equals(that.mPackageName) :
+                that.mPackageName == null && (mClassName != null ? mClassName.equals(that.mClassName) : that.mClassName == null);
 
     }
 

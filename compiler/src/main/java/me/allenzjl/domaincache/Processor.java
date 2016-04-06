@@ -106,6 +106,9 @@ public class Processor extends AbstractProcessor {
                 } else if (isCacheParameterElement(methodElement)) {
                     verifyCacheParameterElement(methodElement);
                     cacheClass.addCacheParameter(new AdditionalParameter(methodElement));
+                } else if (isCacheEvictElement(methodElement)) {
+                    verifyCacheEvictElement(methodElement);
+                    cacheClass.addMethod(new BaseMethod(cacheClass.getPackageName(), cacheClass.getClassName(), methodElement));
                 }
             }
         }
@@ -114,6 +117,12 @@ public class Processor extends AbstractProcessor {
     protected void verifyCacheableDomainElement(Element e) {
         if (!e.getModifiers().contains(Modifier.PUBLIC)) {
             ProcessUtils.printError("@CacheableDomain should annotate a public class", e);
+        }
+        if (e.getModifiers().contains(Modifier.FINAL)) {
+            ProcessUtils.printError("@CacheableDomain should not annotate a final class", e);
+        }
+        if (e.getModifiers().contains(Modifier.ABSTRACT)) {
+            ProcessUtils.printError("@CacheableDomain should not annotate a abstract class", e);
         }
         if (((TypeElement) e).getNestingKind().isNested()) {
             ProcessUtils.printError("@CacheableDomain should not annotate a nested class", e);
@@ -137,8 +146,8 @@ public class Processor extends AbstractProcessor {
     }
 
     protected void verifyCacheParameterElement(Element e) {
-        if (!e.getModifiers().contains(Modifier.PUBLIC)) {
-            ProcessUtils.printError("@CacheParameter should annotate a public method/field", e);
+        if (e.getModifiers().contains(Modifier.PRIVATE)) {
+            ProcessUtils.printError("@CacheParameter should not annotate a private method/field", e);
         }
         if (e.getModifiers().contains(Modifier.STATIC)) {
             ProcessUtils.printError("@CacheParameter should not annotate a static method/field", e);
@@ -164,8 +173,11 @@ public class Processor extends AbstractProcessor {
     }
 
     protected void verifyCacheableElement(ExecutableElement e) {
-        if (!e.getModifiers().contains(Modifier.PUBLIC)) {
-            ProcessUtils.printError("@Cacheable should annotate a public method", e);
+        if (e.getModifiers().contains(Modifier.PRIVATE)) {
+            ProcessUtils.printError("@Cacheable should not annotate a private method", e);
+        }
+        if (e.getModifiers().contains(Modifier.FINAL)) {
+            ProcessUtils.printError("@Cacheable should not annotate a final method", e);
         }
         if (e.getModifiers().contains(Modifier.STATIC)) {
             ProcessUtils.printError("@Cacheable should not annotate a static method", e);
@@ -185,6 +197,25 @@ public class Processor extends AbstractProcessor {
             }
         } else if (returnTypeName instanceof TypeVariableName || returnTypeName instanceof WildcardTypeName) {
             ProcessUtils.printError("Unsupported return type of method annotated by @Cacheable", e);
+        }
+    }
+
+    protected boolean isCacheEvictElement(ExecutableElement element) {
+        return element.getAnnotation(CacheEvict.class) != null;
+    }
+
+    protected void verifyCacheEvictElement(ExecutableElement e) {
+        if (e.getModifiers().contains(Modifier.PRIVATE)) {
+            ProcessUtils.printError("@CacheEvict should not annotate a private method", e);
+        }
+        if (e.getModifiers().contains(Modifier.FINAL)) {
+            ProcessUtils.printError("@CacheEvict should not annotate a final method", e);
+        }
+        if (e.getModifiers().contains(Modifier.STATIC)) {
+            ProcessUtils.printError("@CacheEvict should not annotate a static method", e);
+        }
+        if (e.getAnnotation(CacheParameter.class) != null) {
+            ProcessUtils.printError("Method annotated by @CacheEvict should not annotated by @CacheParameter", e);
         }
     }
 

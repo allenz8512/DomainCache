@@ -2,34 +2,20 @@ package me.allenzjl.domaincache;
 
 import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
-import com.squareup.javapoet.ParameterSpec;
-import com.squareup.javapoet.ParameterizedTypeName;
 import com.squareup.javapoet.TypeName;
-import com.squareup.javapoet.TypeSpec;
-import com.squareup.javapoet.TypeVariableName;
-import com.squareup.javapoet.WildcardTypeName;
 
-import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 import javax.lang.model.element.ExecutableElement;
-import javax.lang.model.element.Modifier;
-import javax.lang.model.element.TypeParameterElement;
 import javax.lang.model.element.VariableElement;
 import javax.lang.model.type.TypeMirror;
-import javax.lang.model.type.TypeVariable;
 
 /**
- * Created by Allen on 2016/4/3.
+ * The type Base method.
  */
-public abstract class AbstractMethod {
-
-    public static final ClassName OBSERVABLE_TYPE = ClassName.get("rx", "Observable");
-
-    public static final String SUBSCRIBER_NAME = "subscriber";
+public class BaseMethod {
 
     public static final ClassName CACHE_STORAGE_TYPE = ClassName.get("me.allenzjl.domaincache", "CacheStorage");
 
@@ -57,7 +43,7 @@ public abstract class AbstractMethod {
 
     protected Map<String, Set<AdditionalParameter>> mCacheParameters;
 
-    public AbstractMethod(String packageName, String className, ExecutableElement methodElement) {
+    public BaseMethod(String packageName, String className, ExecutableElement methodElement) {
         mPackageName = packageName;
         mClassName = className;
         mClassQualifiedName = packageName + "." + className;
@@ -116,70 +102,31 @@ public abstract class AbstractMethod {
         return builder.toString();
     }
 
-    protected MethodSpec.Builder observableMethod(ExecutableElement method) {
-        Set<Modifier> modifiers = method.getModifiers();
-        String methodName = method.getSimpleName().toString();
-        MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder(methodName);
-
-        modifiers = new LinkedHashSet<>(modifiers);
-        modifiers.remove(Modifier.ABSTRACT);
-        methodBuilder.addModifiers(modifiers);
-
-        for (TypeParameterElement typeParameterElement : method.getTypeParameters()) {
-            TypeVariable var = (TypeVariable) typeParameterElement.asType();
-            methodBuilder.addTypeVariable(TypeVariableName.get(var));
-        }
-
-        initReturnType();
-
-        TypeName returnType = ParameterizedTypeName.get(OBSERVABLE_TYPE, mReturnType);
-        methodBuilder.returns(returnType);
-
-        List<? extends VariableElement> parameters = method.getParameters();
-        for (VariableElement parameter : parameters) {
-            TypeName type = TypeName.get(parameter.asType());
-            String name = parameter.getSimpleName().toString();
-            Set<Modifier> parameterModifiers = parameter.getModifiers();
-            if (!parameterModifiers.contains(Modifier.FINAL)) {
-                parameterModifiers = new HashSet<>(parameterModifiers);
-                parameterModifiers.add(Modifier.FINAL);
-            }
-            ParameterSpec.Builder parameterBuilder = ParameterSpec.builder(type, name)
-                    .addModifiers(parameterModifiers.toArray(new Modifier[parameterModifiers.size()]));
-            methodBuilder.addParameter(parameterBuilder.build());
-        }
-        methodBuilder.varargs(method.isVarArgs());
-
-        return methodBuilder;
-    }
-
     public MethodSpec generateMethod(Map<String, Set<AdditionalParameter>> cacheParameters) {
         mCacheParameters = cacheParameters;
-        MethodSpec.Builder methodBuilder = observableMethod(mMethodElement);
-        TypeSpec.Builder onSubscribeBuilder = TypeSpec.anonymousClassBuilder("");
-        ClassName onSubscribeTypeName = ClassName.get("rx", "Observable.OnSubscribe");
-        onSubscribeBuilder.addSuperinterface(ParameterizedTypeName.get(onSubscribeTypeName, mReturnType));
-        MethodSpec callMethod = generateCallMethod(getCallMethodBuilder());
-        onSubscribeBuilder.addMethod(callMethod);
-        methodBuilder.addStatement("return $T.create($L)", OBSERVABLE_TYPE, onSubscribeBuilder.build());
+        initReturnType();
+        MethodSpec.Builder methodBuilder = ProcessUtils.overrideMethod(mMethodElement);
+        addCacheEvict(methodBuilder);
+        addMethodContent(methodBuilder);
         return methodBuilder.build();
     }
 
-    protected MethodSpec.Builder getCallMethodBuilder() {
-        ParameterizedTypeName subscriberTypeName =
-                ParameterizedTypeName.get(ClassName.get("rx", "Subscriber"), WildcardTypeName.supertypeOf(mReturnType));
-        MethodSpec.Builder methodBuilder = MethodSpec.methodBuilder("call");
-        methodBuilder.addAnnotation(Override.class).addModifiers(Modifier.PUBLIC)
-                .addParameter(subscriberTypeName, SUBSCRIBER_NAME);
+    protected void addCacheEvict(MethodSpec.Builder methodBuilder) {
         if (mExpireAlias != null) {
             String aliasName = mMethodName + "_a";
             methodBuilder.addStatement("String $N = $S", aliasName, mExpireAlias);
             methodBuilder.addStatement("$T.getInstance().remove($N)", CACHE_STORAGE_TYPE, aliasName);
         }
-        return methodBuilder;
     }
 
-    protected abstract MethodSpec generateCallMethod(MethodSpec.Builder methodBuilder);
+    protected void addMethodContent(MethodSpec.Builder methodBuilder) {
+        String paramNames = buildParamNames();
+        if (mReturnType != TypeName.VOID.box()) {
+            methodBuilder.addStatement("return super.$N($N)", mMethodName, paramNames);
+        } else {
+            methodBuilder.addStatement("super.$N($N)", mMethodName, paramNames);
+        }
+    }
 
     @Override
     public boolean equals(Object o) {
@@ -192,10 +139,8 @@ public abstract class AbstractMethod {
 
         CacheMethod that = (CacheMethod) o;
 
-        if (mMethodName != null ? !mMethodName.equals(that.mMethodName) : that.mMethodName != null) {
-            return false;
-        }
-        return mSignature != null ? mSignature.equals(that.mSignature) : that.mSignature == null;
+        return mMethodName != null ? mMethodName.equals(that.mMethodName) :
+                that.mMethodName == null && (mSignature != null ? mSignature.equals(that.mSignature) : that.mSignature == null);
 
     }
 
