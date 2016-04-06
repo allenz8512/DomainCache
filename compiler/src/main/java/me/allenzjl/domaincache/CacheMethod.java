@@ -55,7 +55,7 @@ public class CacheMethod extends AbstractMethod {
             ProcessUtils.printError("Value of attribute 'expire' should not below zero", mMethodElement);
         }
         mExpire = expire;
-        int strategy = mCacheable.strategy();
+        int strategy = CacheStrategy.READ_CACHE_ONLY;
         if (strategy != CacheStrategy.READ_CACHE_ONLY && strategy != CacheStrategy.PUSH_CACHE_FIRST) {
             ProcessUtils.printError("Value of attribute 'strategy' is illegal", mMethodElement);
         }

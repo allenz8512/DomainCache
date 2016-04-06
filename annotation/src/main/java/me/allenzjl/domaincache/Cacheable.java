@@ -18,5 +18,4 @@ public @interface Cacheable {
 
     int expire() default 0;
 
-    int strategy() default CacheStrategy.READ_CACHE_ONLY;
 }
