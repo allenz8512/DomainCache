@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.SOURCE)
 @Documented
-public @interface Observable {
+public @interface CacheObservable {
 
     int value() default CacheStrategy.READ_CACHE_ONLY;
 }
