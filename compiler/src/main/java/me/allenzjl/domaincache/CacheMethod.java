@@ -17,7 +17,7 @@ import javax.lang.model.element.VariableElement;
 /**
  * The type Cache method.
  */
-public class CacheMethod extends BaseMethod {
+public class CacheMethod extends CacheEvictMethod {
 
     public static final int RETURN_TYPE_FORM_OBJECT = 0;
 

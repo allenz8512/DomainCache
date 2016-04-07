@@ -15,7 +15,7 @@ import javax.lang.model.type.TypeMirror;
 /**
  * The type Base method.
  */
-public class BaseMethod {
+public class CacheEvictMethod {
 
     public static final ClassName CACHE_STORAGE_TYPE = ClassName.get("me.allenzjl.domaincache", "CacheStorage");
 
@@ -43,7 +43,7 @@ public class BaseMethod {
 
     protected Map<String, Set<AdditionalParameter>> mCacheParameters;
 
-    public BaseMethod(String packageName, String className, ExecutableElement methodElement) {
+    public CacheEvictMethod(String packageName, String className, ExecutableElement methodElement) {
         mPackageName = packageName;
         mClassName = className;
         mClassQualifiedName = packageName + "." + className;

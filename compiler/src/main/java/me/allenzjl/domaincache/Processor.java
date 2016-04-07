@@ -108,7 +108,7 @@ public class Processor extends AbstractProcessor {
                     cacheClass.addCacheParameter(new AdditionalParameter(methodElement));
                 } else if (isCacheEvictElement(methodElement)) {
                     verifyCacheEvictElement(methodElement);
-                    cacheClass.addMethod(new BaseMethod(cacheClass.getPackageName(), cacheClass.getClassName(), methodElement));
+                    cacheClass.addMethod(new CacheEvictMethod(cacheClass.getPackageName(), cacheClass.getClassName(), methodElement));
                 }
             }
         }
