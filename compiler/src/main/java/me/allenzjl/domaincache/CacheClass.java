@@ -24,7 +24,7 @@ import javax.lang.model.element.TypeElement;
  */
 public class CacheClass {
 
-    public static final String CACHE_CLASS_NAME_SUFFIX = "Proxy";
+    public static final String CACHE_CLASS_NAME_SUFFIX = "Cacheable";
 
     protected TypeElement mClassElement;
 
