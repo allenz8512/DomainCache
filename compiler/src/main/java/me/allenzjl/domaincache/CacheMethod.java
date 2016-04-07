@@ -9,6 +9,7 @@ import com.squareup.javapoet.TypeName;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import javax.lang.model.element.ExecutableElement;
@@ -37,6 +38,8 @@ public class CacheMethod extends CacheEvictMethod {
 
     protected TypeName mResultType;
 
+    protected Map<String, Set<AdditionalParameter>> mCacheParameters;
+
     public CacheMethod(String packageName, String className, ExecutableElement methodElement) {
         super(packageName, className, methodElement);
         processCacheableAnnotation();
@@ -53,6 +56,10 @@ public class CacheMethod extends CacheEvictMethod {
             ProcessUtils.printError("Value of attribute 'expire' should not below zero", mMethodElement);
         }
         mExpire = expire;
+    }
+
+    public void setCacheParameters(Map<String, Set<AdditionalParameter>> cacheParameters) {
+        mCacheParameters = cacheParameters;
     }
 
     protected void initResultType() {

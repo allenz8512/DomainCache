@@ -100,15 +100,23 @@ public class Processor extends AbstractProcessor {
                 }
             } else if (element.getKind() == ElementKind.METHOD) {
                 ExecutableElement methodElement = ((ExecutableElement) element);
+                String packageName = cacheClass.getPackageName();
+                String className = cacheClass.getClassName();
                 if (isCacheableElement(methodElement)) {
                     verifyCacheableElement(methodElement);
-                    cacheClass.addMethod(new CacheMethod(cacheClass.getPackageName(), cacheClass.getClassName(), methodElement));
+                    cacheClass.addMethod(new CacheMethod(packageName, className, methodElement));
+                    if (isCacheObservableElement(methodElement)) {
+                        int strategy = methodElement.getAnnotation(CacheObservable.class).value();
+                        if (strategy == CacheStrategy.PUSH_CACHE_FIRST) {
+                            cacheClass.addMethod(new SuperMethod(packageName, className, methodElement));
+                        }
+                    }
                 } else if (isCacheParameterElement(methodElement)) {
                     verifyCacheParameterElement(methodElement);
                     cacheClass.addCacheParameter(new AdditionalParameter(methodElement));
                 } else if (isCacheEvictElement(methodElement)) {
                     verifyCacheEvictElement(methodElement);
-                    cacheClass.addMethod(new CacheEvictMethod(cacheClass.getPackageName(), cacheClass.getClassName(), methodElement));
+                    cacheClass.addMethod(new CacheEvictMethod(packageName, className, methodElement));
                 }
             }
         }
@@ -152,13 +160,16 @@ public class Processor extends AbstractProcessor {
         if (e.getModifiers().contains(Modifier.STATIC)) {
             ProcessUtils.printError("@CacheParameter should not annotate a static method/field", e);
         }
-        if (e.getAnnotation(Cacheable.class) != null) {
-            ProcessUtils.printError("Method annotated by @CacheParameter should not annotated by @Cacheable", e);
-        }
-        if (e.getAnnotation(CacheEvict.class) != null) {
-            ProcessUtils.printError("Method annotated by @CacheParameter should not annotated by @CacheEvict", e);
-        }
         if (e.getKind() == ElementKind.METHOD) {
+            if (e.getAnnotation(Cacheable.class) != null) {
+                ProcessUtils.printError("Method annotated by @CacheParameter should not annotated by @Cacheable", e);
+            }
+            if (e.getAnnotation(CacheEvict.class) != null) {
+                ProcessUtils.printError("Method annotated by @CacheParameter should not annotated by @CacheEvict", e);
+            }
+            if (e.getAnnotation(CacheObservable.class) != null) {
+                ProcessUtils.printError("Method annotated by @CacheParameter should not annotated by @CacheObservable", e);
+            }
             if (!((ExecutableElement) e).getParameters().isEmpty()) {
                 ProcessUtils.printError("Method annotated by @CacheParameter should not have any parameter", e);
             }
@@ -217,6 +228,10 @@ public class Processor extends AbstractProcessor {
         if (e.getAnnotation(CacheParameter.class) != null) {
             ProcessUtils.printError("Method annotated by @CacheEvict should not annotated by @CacheParameter", e);
         }
+    }
+
+    protected boolean isCacheObservableElement(ExecutableElement element) {
+        return element.getAnnotation(CacheObservable.class) != null;
     }
 
     protected void markCacheMethod(ExecutableElement cacheMethodElement) {

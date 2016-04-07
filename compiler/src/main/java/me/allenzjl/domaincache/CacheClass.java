@@ -32,7 +32,7 @@ public class CacheClass {
 
     protected String mClassName;
 
-    protected Set<CacheEvictMethod> mMethods;
+    protected Set<BasicMethod> mMethods;
 
     protected boolean mJavaFileGenerated = false;
 
@@ -66,7 +66,7 @@ public class CacheClass {
         return mCacheParameters;
     }
 
-    public void addMethod(CacheEvictMethod cacheMethod) {
+    public void addMethod(BasicMethod cacheMethod) {
         if (!mMethods.contains(cacheMethod)) {
             mMethods.add(cacheMethod);
         }
@@ -99,8 +99,11 @@ public class CacheClass {
         TypeSpec.Builder cacheClassBuilder =
                 TypeSpec.classBuilder(mClassName).addModifiers(Modifier.PUBLIC).superclass(clientClassType);
         addCacheClassConstructors(cacheClassBuilder);
-        for (CacheEvictMethod method : mMethods) {
-            cacheClassBuilder.addMethod(method.generateMethod(mCacheParameters));
+        for (BasicMethod method : mMethods) {
+            if (method instanceof CacheMethod) {
+                ((CacheMethod) method).setCacheParameters(mCacheParameters);
+            }
+            cacheClassBuilder.addMethod(method.generateMethod());
         }
         return cacheClassBuilder.build();
     }
