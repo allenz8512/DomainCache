@@ -4,6 +4,9 @@ import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import javax.lang.model.element.ExecutableElement;
 
 /**
@@ -33,11 +36,13 @@ public class CacheEvictMethod extends BasicMethod {
     }
 
     @Override
-    public MethodSpec generateMethod() {
+    public List<MethodSpec> generateMethods() {
         MethodSpec.Builder methodBuilder = ProcessUtils.overrideMethod(mMethodElement);
         addCacheEvict(methodBuilder);
         addMethodContent(methodBuilder);
-        return methodBuilder.build();
+        List<MethodSpec> list = new ArrayList<>(1);
+        list.add(methodBuilder.build());
+        return list;
     }
 
     protected void addCacheEvict(MethodSpec.Builder methodBuilder) {

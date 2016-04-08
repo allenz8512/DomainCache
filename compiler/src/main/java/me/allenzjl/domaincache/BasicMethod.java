@@ -112,5 +112,5 @@ public abstract class BasicMethod {
         }
     }
 
-    public abstract MethodSpec generateMethod();
+    public abstract List<MethodSpec> generateMethods();
 }

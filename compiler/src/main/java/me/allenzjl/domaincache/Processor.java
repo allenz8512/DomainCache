@@ -37,6 +37,8 @@ public class Processor extends AbstractProcessor {
 
     protected Map<String, CacheClass> mCacheClasses;
 
+    protected Map<String, ObservableClass> mObservableClasses;
+
     @Override
     public Set<String> getSupportedAnnotationTypes() {
         Set<String> annotations = new LinkedHashSet<>();
@@ -54,6 +56,7 @@ public class Processor extends AbstractProcessor {
         super.init(processingEnv);
         ProcessUtils.init(processingEnv);
         mCacheClasses = new HashMap<>();
+        mObservableClasses = new HashMap<>();
     }
 
     @Override
@@ -85,41 +88,18 @@ public class Processor extends AbstractProcessor {
         for (CacheClass cacheClass : mCacheClasses.values()) {
             cacheClass.generateJavaFile();
         }
-        mCacheClasses.clear();
+
+        for (ObservableClass observableClass : mObservableClasses.values()) {
+            observableClass.generateJavaFile();
+        }
+
+        roundClean();
         return false;
     }
 
-    protected void markMethods(CacheClass cacheClass) {
-        TypeElement classElement = cacheClass.getClassElement();
-        List<? extends Element> enclosedElements = classElement.getEnclosedElements();
-        for (Element element : enclosedElements) {
-            if (element.getKind() == ElementKind.FIELD) {
-                if (isCacheParameterElement(element)) {
-                    verifyCacheParameterElement(element);
-                    cacheClass.addCacheParameter(new AdditionalParameter(element));
-                }
-            } else if (element.getKind() == ElementKind.METHOD) {
-                ExecutableElement methodElement = ((ExecutableElement) element);
-                String packageName = cacheClass.getPackageName();
-                String className = cacheClass.getClassName();
-                if (isCacheableElement(methodElement)) {
-                    verifyCacheableElement(methodElement);
-                    cacheClass.addMethod(new CacheMethod(packageName, className, methodElement));
-                    if (isCacheObservableElement(methodElement)) {
-                        int strategy = methodElement.getAnnotation(CacheObservable.class).value();
-                        if (strategy == CacheStrategy.PUSH_CACHE_FIRST) {
-                            cacheClass.addMethod(new SuperMethod(packageName, className, methodElement));
-                        }
-                    }
-                } else if (isCacheParameterElement(methodElement)) {
-                    verifyCacheParameterElement(methodElement);
-                    cacheClass.addCacheParameter(new AdditionalParameter(methodElement));
-                } else if (isCacheEvictElement(methodElement)) {
-                    verifyCacheEvictElement(methodElement);
-                    cacheClass.addMethod(new CacheEvictMethod(packageName, className, methodElement));
-                }
-            }
-        }
+    protected void roundClean() {
+        mCacheClasses.clear();
+        mObservableClasses.clear();
     }
 
     protected void verifyCacheableDomainElement(Element e) {
@@ -145,8 +125,40 @@ public class Processor extends AbstractProcessor {
         }
     }
 
-    private boolean isCacheableElement(ExecutableElement methodElement) {
-        return methodElement.getAnnotation(Cacheable.class) != null;
+    protected void markMethods(CacheClass cacheClass) {
+        TypeElement classElement = cacheClass.getClassElement();
+        List<? extends Element> enclosedElements = classElement.getEnclosedElements();
+        for (Element element : enclosedElements) {
+            if (element.getKind() == ElementKind.FIELD) {
+                if (isCacheParameterElement(element)) {
+                    verifyCacheParameterElement(element);
+                    cacheClass.addCacheParameter(new AdditionalParameter(element));
+                }
+            } else if (element.getKind() == ElementKind.METHOD) {
+                ExecutableElement methodElement = ((ExecutableElement) element);
+                String packageName = cacheClass.getPackageName();
+                String className = cacheClass.getClassName();
+                if (isCacheableElement(methodElement)) {
+                    verifyCacheableElement(methodElement);
+                    cacheClass.addMethod(new CacheMethod(packageName, className, methodElement));
+                } else if (isCacheParameterElement(methodElement)) {
+                    verifyCacheParameterElement(methodElement);
+                    cacheClass.addCacheParameter(new AdditionalParameter(methodElement));
+                } else if (isCacheEvictElement(methodElement)) {
+                    verifyCacheEvictElement(methodElement);
+                    cacheClass.addMethod(new CacheEvictMethod(packageName, className, methodElement));
+                }
+
+                if (isCacheObservableElement(methodElement)) {
+                    verifyCacheObservableElement(methodElement);
+                    markObservableMethod(classElement, methodElement);
+                }
+            }
+        }
+    }
+
+    private boolean isCacheableElement(ExecutableElement e) {
+        return e.getAnnotation(Cacheable.class) != null;
     }
 
     protected boolean isCacheParameterElement(Element e) {
@@ -211,8 +223,8 @@ public class Processor extends AbstractProcessor {
         }
     }
 
-    protected boolean isCacheEvictElement(ExecutableElement element) {
-        return element.getAnnotation(CacheEvict.class) != null;
+    protected boolean isCacheEvictElement(ExecutableElement e) {
+        return e.getAnnotation(CacheEvict.class) != null;
     }
 
     protected void verifyCacheEvictElement(ExecutableElement e) {
@@ -230,8 +242,23 @@ public class Processor extends AbstractProcessor {
         }
     }
 
-    protected boolean isCacheObservableElement(ExecutableElement element) {
-        return element.getAnnotation(CacheObservable.class) != null;
+    protected boolean isCacheObservableElement(ExecutableElement e) {
+        return e.getAnnotation(CacheObservable.class) != null;
+    }
+
+    protected void verifyCacheObservableElement(ExecutableElement e) {
+        if (e.getModifiers().contains(Modifier.PRIVATE)) {
+            ProcessUtils.printError("@CacheObservable should not annotate a private method", e);
+        }
+        if (e.getModifiers().contains(Modifier.FINAL)) {
+            ProcessUtils.printError("@CacheObservable should not annotate a final method", e);
+        }
+        if (e.getModifiers().contains(Modifier.STATIC)) {
+            ProcessUtils.printError("@CacheObservable should not annotate a static method", e);
+        }
+        if (e.getAnnotation(CacheParameter.class) != null) {
+            ProcessUtils.printError("Method annotated by @CacheObservable should not annotated by @CacheParameter", e);
+        }
     }
 
     protected void markCacheMethod(ExecutableElement cacheMethodElement) {
@@ -243,5 +270,17 @@ public class Processor extends AbstractProcessor {
         }
         CacheClass cacheClass = mCacheClasses.get(qualifiedName);
         cacheClass.addMethod(new CacheMethod(cacheClass.getPackageName(), cacheClass.getClassName(), cacheMethodElement));
+    }
+
+    protected void markObservableMethod(TypeElement classElement, ExecutableElement methodElement) {
+        ObservableClass observableClass = new ObservableClass(classElement);
+        String qualifiedName = observableClass.getQualifiedName();
+        if (mObservableClasses.containsKey(qualifiedName)) {
+            observableClass = mObservableClasses.get(qualifiedName);
+        } else {
+            mObservableClasses.put(qualifiedName, observableClass);
+        }
+        observableClass
+                .addMethod(new ObservableMethod(observableClass.getPackageName(), observableClass.getClassName(), methodElement));
     }
 }
