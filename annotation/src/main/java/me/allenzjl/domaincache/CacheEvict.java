@@ -15,4 +15,6 @@ import java.lang.annotation.Target;
 public @interface CacheEvict {
 
     String value();
+
+    String expr() default "";
 }

@@ -244,8 +244,15 @@ public class CacheMethod extends CacheEvictMethod {
 
     private void addStoreCacheAndReturnStatements(MethodSpec.Builder methodBuilder) {
         methodBuilder.addStatement("$N = super.$N($N)", mResultName, mMethodName, buildParamNames());
-        methodBuilder.addStatement("$T.getInstance().put($N, $N, $N, $S, $L)", CACHE_STORAGE_TYPE, mKeyName, mJsonObjectName,
-                mResultName, mCacheAlias, mExpire);
+        String indexableParamNames = buildIndexableParamNames();
+        if (ProcessUtils.isStringEmpty(indexableParamNames)) {
+            methodBuilder
+                    .addStatement("$T.getInstance().put($N, $N, $N, $L, $S, $S)", CACHE_STORAGE_TYPE, mKeyName, mJsonObjectName,
+                            mResultName, mExpire, mCacheAlias, indexableParamNames);
+        } else {
+            methodBuilder.addStatement("$T.getInstance().put($N, $N, $N, $L, $S, $S, $L)", CACHE_STORAGE_TYPE, mKeyName,
+                    mJsonObjectName, mResultName, mExpire, mCacheAlias, indexableParamNames, indexableParamNames);
+        }
         methodBuilder.addStatement("return $N", mResultName);
     }
 

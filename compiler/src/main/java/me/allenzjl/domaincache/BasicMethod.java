@@ -1,5 +1,6 @@
 package me.allenzjl.domaincache;
 
+import com.squareup.javapoet.ClassName;
 import com.squareup.javapoet.MethodSpec;
 import com.squareup.javapoet.TypeName;
 
@@ -77,6 +78,23 @@ public abstract class BasicMethod {
             if (i < size - 1) {
                 builder.append(", ");
             }
+        }
+        return builder.toString();
+    }
+
+    protected String buildIndexableParamNames() {
+        StringBuilder builder = new StringBuilder();
+        int size = mParameters.size();
+        for (int i = 0; i < size; i++) {
+            VariableElement paramElement = mParameters.get(i);
+            TypeName paramTypeName = TypeName.get(paramElement.asType());
+            if (paramTypeName.isPrimitive() || paramTypeName.equals(ClassName.get(String.class))) {
+                builder.append(paramElement.getSimpleName().toString()).append(",");
+            }
+        }
+        int length = builder.length();
+        if (length > 0) {
+            builder.delete(length - 1, length);
         }
         return builder.toString();
     }
