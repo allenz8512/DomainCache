@@ -1,7 +1,7 @@
 ext {
     libraryGroup = 'me.allenzjl'
     libraryVersionCode = 2
-    libraryVersion = '0.3.0'
+    libraryVersion = '0.4.0'
 }
 
 buildscript {
