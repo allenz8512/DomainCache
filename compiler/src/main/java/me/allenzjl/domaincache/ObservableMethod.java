@@ -105,11 +105,18 @@ public class ObservableMethod extends BasicMethod {
             methodBuilder.endControlFlow();
             methodBuilder.addStatement("$N = $N.this.$N.$N($N)", resultName, mClassName, ObservableClass.DOMAIN_PROXY_FIELD_NAME,
                     mMethodName + CacheMethod.METHOD_PART_B_SUFFIX, paramNames);
+            methodBuilder.addStatement("$N.onNext($N)", SUBSCRIBER_NAME, resultName);
         } else {
-            methodBuilder.addStatement("$T $N = $N.this.$N.$N($N)", mReturnType, resultName, mClassName,
-                    ObservableClass.DOMAIN_PROXY_FIELD_NAME, mMethodName, paramNames);
+            if (!mReturnType.equals(ClassName.get(Void.class))) {
+                methodBuilder.addStatement("$T $N = $N.this.$N.$N($N)", mReturnType, resultName, mClassName,
+                        ObservableClass.DOMAIN_PROXY_FIELD_NAME, mMethodName, paramNames);
+                methodBuilder.addStatement("$N.onNext($N)", SUBSCRIBER_NAME, resultName);
+            } else {
+                methodBuilder.addStatement("$N.this.$N.$N($N)", mClassName, ObservableClass.DOMAIN_PROXY_FIELD_NAME, mMethodName,
+                        paramNames);
+                methodBuilder.addStatement("$N.onNext(null)", SUBSCRIBER_NAME);
+            }
         }
-        methodBuilder.addStatement("$N.onNext($N)", SUBSCRIBER_NAME, resultName);
         methodBuilder.addStatement("$N.onCompleted()", SUBSCRIBER_NAME);
         return methodBuilder.build();
     }
