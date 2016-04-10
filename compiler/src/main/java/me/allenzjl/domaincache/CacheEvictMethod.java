@@ -21,7 +21,7 @@ public class CacheEvictMethod extends BasicMethod {
     public static final ClassName CACHE_STORAGE_TYPE = ClassName.get("me.allenzjl.domaincache", "CacheStorage");
 
     public static final Pattern EXPRESSION_REGEX =
-            Pattern.compile("^\\s*([A-Za-z_]{1}[A-Za-z_\\d]*)\\s*(<|>|=|<=|>=|!=)\\s*(#?[A-Za-z_\\d.]+)\\s*$");
+            Pattern.compile("^\\s*([A-Za-z_]{1}[A-Za-z_\\d]*)\\s*(=|!=)\\s*(#?[A-Za-z_\\d.-]+)\\s*$");
 
     protected CacheEvict mCacheEvict;
 
